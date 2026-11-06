@@ -1,0 +1,20 @@
+# Generated Vivado project + run outputs (recreate with scripts/vivado/create_project.tcl)
+build/
+.Xil/
+xsim.dir/
+*.jou
+*.log
+*.str
+*.wdb
+*.pb
+*.backup.*
+webtalk*
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+Thumbs.db
+desktop.ini

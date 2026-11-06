@@ -1,0 +1,44 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
+| Date         : Sun Sep 13 03:30:40 2026
+| Host         : LAPTOP-GAC5U3TM running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file C:/Users/devan/OneDrive/Desktop/dev/coding/verilog/MiniSoC/reports/soc_utilization.rpt
+| Design       : rv32i_soc
+| Device       : xczu7ev-ffvc1156-2-e
+| Speed File   : -2
+| Design State : Routed
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------+------------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+|  Instance  |         Module         | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
++------------+------------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+| rv32i_soc  |                  (top) |       2143 |       2015 |     128 |    0 | 1907 |      0 |      0 |    0 |          0 |
+|   axi_mgr0 |            axi_manager |         30 |         30 |       0 |    0 |  141 |      0 |      0 |    0 |          0 |
+|   bridge0  | axi_lite_to_simple_bus |        220 |        220 |       0 |    0 |  106 |      0 |      0 |    0 |          0 |
+|   core0    |             rv32i_core |       1717 |       1717 |       0 |    0 | 1453 |      0 |      0 |    0 |          0 |
+|     exmem0 |            mem_pip_reg |        200 |        200 |       0 |    0 |  113 |      0 |      0 |    0 |          0 |
+|     idex0  |          id_ex_pip_reg |        587 |        587 |       0 |    0 |  153 |      0 |      0 |    0 |          0 |
+|     if_id0 |                decoder |        145 |        145 |       0 |    0 |   59 |      0 |      0 |    0 |          0 |
+|     ig0    |                imm_gen |         23 |         23 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|     jalr0  |        jalr_type_adder |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|     memwb0 |               pip_reg4 |        132 |        132 |       0 |    0 |  104 |      0 |      0 |    0 |          0 |
+|     pc0    |           prog_counter |         42 |         42 |       0 |    0 |   32 |      0 |      0 |    0 |          0 |
+|     rf0    |               reg_file |        576 |        576 |       0 |    0 |  992 |      0 |      0 |    0 |          0 |
+|   dmem0    |            data_memory |        128 |          0 |     128 |    0 |    0 |      0 |      0 |    0 |          0 |
+|   gpio0    |                   gpio |          0 |          0 |       0 |    0 |   96 |      0 |      0 |    0 |          0 |
+|   timer0   |                  timer |         13 |         13 |       0 |    0 |   65 |      0 |      0 |    0 |          0 |
+|   uart0    |                   uart |         37 |         37 |       0 |    0 |   46 |      0 |      0 |    0 |          0 |
++------------+------------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+
