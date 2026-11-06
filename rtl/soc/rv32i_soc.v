@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 
-module rv32i_soc(
+module rv32i_soc #(
+    parameter CLK_FREQ  = 50_000_000,  // Hz, sets the UART baud divider
+    parameter BAUD_RATE = 115_200
+)(
     input  clk,
     input  reset,
 
@@ -9,12 +12,18 @@ module rv32i_soc(
 
     output timer_irq,
 
-    // NEW -- UART pins
     output uart_tx,
-    input  uart_rx
+    input  uart_rx,
+
+    // Instruction memory program-load port (use while reset is held)
+    input         imem_load_we,
+    input  [7:0]  imem_load_addr,   // word address
+    input  [31:0] imem_load_data
 );
 
     wire resetn = ~reset;
+
+    wire [31:0] imem_addr, imem_rdata;
 
     wire [31:0] core_mem_addr, core_mem_wdata, core_mem_rdata;
     wire [3:0]  core_mem_wstrb;
@@ -41,12 +50,22 @@ module rv32i_soc(
     wire [31:0] p_timer_addr, p_timer_wdata, p_timer_rdata;
     wire        p_timer_we;
 
-    // NEW -- UART peripheral bus
     wire [31:0] p_uart_addr, p_uart_wdata, p_uart_rdata;
     wire        p_uart_we, p_uart_re;
 
+    instruction_memory imem0(
+        .clk(clk),
+        .fetch_addr(imem_addr),
+        .instr(imem_rdata),
+        .load_we(imem_load_we),
+        .load_addr(imem_load_addr),
+        .load_data(imem_load_data)
+    );
+
     rv32i_core core0(
         .clk(clk), .reset(reset),
+        .imem_addr(imem_addr),
+        .imem_rdata(imem_rdata),
         .mem_addr(core_mem_addr),
         .mem_wdata(core_mem_wdata),
         .mem_wstrb(core_mem_wstrb),
@@ -95,7 +114,7 @@ module rv32i_soc(
     );
 
     data_memory dmem0(
-        .clk(clk), .reset(reset),
+        .clk(clk),
         .addr(p_mem_addr), .write_data(p_mem_wdata), .wstrb(p_mem_wstrb),
         .mem_read(p_mem_re), .mem_write(p_mem_we),
         .read_data(p_mem_rdata)
@@ -113,10 +132,9 @@ module rv32i_soc(
         .timer_irq(timer_irq)
     );
 
-    // NEW -- UART, simulation-friendly baud (override for real FPGA build)
     uart #(
-        .CLK_FREQ(1000),
-        .BAUD_RATE(100)
+        .CLK_FREQ(CLK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
     ) uart0(
         .clk(clk), .reset(reset),
         .addr(p_uart_addr), .wdata(p_uart_wdata),

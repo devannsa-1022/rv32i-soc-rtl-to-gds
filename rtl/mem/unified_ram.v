@@ -14,11 +14,13 @@ module unified_ram #(
     output reg [31:0] rdata
 );
     reg [31:0] mem [0:RAM_WORDS-1];
+`ifndef SYNTHESIS
     integer i;
 
     initial begin
         for (i = 0; i < RAM_WORDS; i = i + 1) mem[i] = 32'h0;
     end
+`endif
 
     always @(posedge clk) begin
         if (we) mem[addr] <= wdata;

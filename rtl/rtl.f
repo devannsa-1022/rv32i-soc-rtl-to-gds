@@ -12,7 +12,6 @@ rtl/core/forward_mux_unit.v
 rtl/core/Hazard_Detection_Unit.v
 rtl/core/id_ex_pip_reg.v
 rtl/core/imm_gen.v
-rtl/core/instruction_memory.v
 rtl/core/load_unit.v
 rtl/core/load_use_hazard_unit.v
 rtl/core/mem_pip_reg.v
@@ -33,7 +32,10 @@ rtl/periph/gpio.v
 rtl/periph/timer.v
 rtl/periph/uart.v
 
-# Memories (dcache/unified_ram are not yet instantiated in rv32i_soc)
+# Memories. sram_32x256_1rw1r is the behavioral stand-in for the SRAM macro.
+# (dcache/unified_ram are not yet instantiated in rv32i_soc)
+rtl/mem/sram_32x256_1rw1r.v
+rtl/mem/instruction_memory.v
 rtl/mem/data_mem.v
 rtl/mem/dcache.v
 rtl/mem/unified_ram.v

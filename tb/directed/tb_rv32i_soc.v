@@ -10,14 +10,20 @@ module tb_rv32i_soc;
     wire uart_tx;
     reg  uart_rx = 1'b1;   // idle high
 
-    rv32i_soc dut (
+    rv32i_soc #(
+        .CLK_FREQ(1000),
+        .BAUD_RATE(100)
+    ) dut (
         .clk(clk),
         .reset(reset),
         .gpio_out(gpio_out),
         .gpio_in(gpio_in),
         .timer_irq(timer_irq),
         .uart_tx(uart_tx),
-        .uart_rx(uart_rx)
+        .uart_rx(uart_rx),
+        .imem_load_we(1'b0),
+        .imem_load_addr(8'h00),
+        .imem_load_data(32'h0)
     );
 
     always #5 clk = ~clk;

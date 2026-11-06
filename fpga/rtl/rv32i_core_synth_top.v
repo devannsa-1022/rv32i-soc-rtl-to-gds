@@ -29,11 +29,30 @@ module rv32i_core_synth_top (
     assign mem_ready = 1'b1;
 
     // ------------------------------------------------------------
+    // Instruction memory, preloaded so the datapath isn't optimized away
+    // ------------------------------------------------------------
+    wire [31:0] imem_addr, imem_rdata;
+
+    instruction_memory #(
+        .INIT_FILE("program.hex")
+    ) imem0 (
+        .clk(clk),
+        .fetch_addr(imem_addr),
+        .instr(imem_rdata),
+        .load_we(1'b0),
+        .load_addr(8'h00),
+        .load_data(32'h0)
+    );
+
+    // ------------------------------------------------------------
     // RV32I core
     // ------------------------------------------------------------
     rv32i_core core0 (
         .clk(clk),
         .reset(reset),
+
+        .imem_addr(imem_addr),
+        .imem_rdata(imem_rdata),
 
         .mem_addr(mem_addr),
         .mem_wdata(mem_wdata),

@@ -10,11 +10,14 @@ module tb_cache;
     wire uart_tx;
     reg  uart_rx = 1'b1;
 
-    rv32i_soc dut (
+    rv32i_soc #(
+        .CLK_FREQ(1000), .BAUD_RATE(100)
+    ) dut (
         .clk(clk), .reset(reset),
         .gpio_out(gpio_out), .gpio_in(32'h0),
         .timer_irq(timer_irq),
-        .uart_tx(uart_tx), .uart_rx(uart_rx)
+        .uart_tx(uart_tx), .uart_rx(uart_rx),
+        .imem_load_we(1'b0), .imem_load_addr(8'h00), .imem_load_data(32'h0)
     );
 
     always #5 clk = ~clk;

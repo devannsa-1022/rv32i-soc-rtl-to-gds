@@ -42,14 +42,23 @@ module tb_top;
   // the real one. Do not re-add axi_lite_if/core_mem_if instantiations here.
 
   // ---------------- DUT ----------------
-  rv32i_soc dut (
-    .clk       (clk),
-    .reset     (reset),
-    .gpio_out  (io_if.gpio_out),
-    .gpio_in   (io_if.gpio_in),
-    .timer_irq (io_if.timer_irq),
-    .uart_tx   (io_if.uart_tx),
-    .uart_rx   (io_if.uart_rx)
+  // CLK_FREQ/BAUD_RATE give 10 clocks per UART bit, which soc_pkg's UART
+  // agent assumes. The program is preloaded via +PROGRAM, so the
+  // instruction-memory load port is tied off.
+  rv32i_soc #(
+    .CLK_FREQ  (1000),
+    .BAUD_RATE (100)
+  ) dut (
+    .clk            (clk),
+    .reset          (reset),
+    .gpio_out       (io_if.gpio_out),
+    .gpio_in        (io_if.gpio_in),
+    .timer_irq      (io_if.timer_irq),
+    .uart_tx        (io_if.uart_tx),
+    .uart_rx        (io_if.uart_rx),
+    .imem_load_we   (1'b0),
+    .imem_load_addr (8'h00),
+    .imem_load_data (32'h0)
   );
 
   // ---------------- Debug probe (PC + full GPR readback) ----------------

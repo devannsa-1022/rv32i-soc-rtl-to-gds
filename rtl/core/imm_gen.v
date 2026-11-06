@@ -12,7 +12,9 @@ assign b_type = {{20{instr[31]}},instr[7],instr[30:25],instr[11:8],1'b0};
 assign j_type = {{12{instr[31]}},instr[19:12],instr[20],instr[30:21],1'b0};
 assign u_type = {instr[31:12],12'h000};
 
-always @(instr or imm_mux)
+// @(*) rather than (instr or imm_mux): the case reads i_type..u_type, which
+// are derived from instr, so a partial list could see them stale in sim.
+always @(*)
   begin
     case(imm_mux)
 

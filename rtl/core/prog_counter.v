@@ -1,8 +1,9 @@
-module prog_counter(clk,reset,jalr_type_in,immbj,stall_in,pc_mux_in,branch_taken_in,ready_in,wrong_predict_in,pc_plus4_in,pc_imm,pc_out);
+module prog_counter(clk,reset,jalr_type_in,immbj,stall_in,pc_mux_in,branch_taken_in,ready_in,wrong_predict_in,pc_plus4_in,pc_imm,pc_out,pc_next);
 
 input [31:0] jalr_type_in,immbj;
 input stall_in,pc_mux_in,branch_taken_in,ready_in,wrong_predict_in,clk,reset;
 output [31:0] pc_plus4_in,pc_imm;
+output [31:0] pc_next;
 output reg [31:0] pc_out;
 reg [31:0] pc_inter_out,next_pc,pc_mux_out,pc_enter,pc_stall_out,reg_pc;
 
@@ -44,6 +45,11 @@ if(stall_in)
 else
    pc_stall_out = pc_mux_out;
 end
+
+// Fetch address for the synchronous instruction memory: the value pc_out
+// takes on the next clock edge (boot_addr while in reset), so the memory's
+// registered output lines up with pc_out.
+assign pc_next = reset ? boot_addr : pc_stall_out;
 
 // FIXED: added async reset so pc_out/reg_pc start at boot_addr instead of
 // unknown (x) - without this, simulation start and any FPGA power-on/reset

@@ -12,9 +12,10 @@ output [data_width-1:0]	read_data1,read_data2;
 
 reg	[data_width-1:0]	reg_filex	[reg_depth-1:0];
 
-// testbench visibility only - real init value on hardware comes from reset below
 integer i = 0;
 
+`ifndef SYNTHESIS
+// testbench visibility only - real init value on hardware comes from reset below
 initial
 begin
 reg_filex[0] <= 32'h0000_0000;
@@ -23,6 +24,7 @@ begin
 reg_filex[i] <= 16*i;
 end
 end
+`endif
 
 // FIXED: added synchronous reset. Without this, an FPGA has no defined
 // way to bring the register file to a known state on power-up/reset -

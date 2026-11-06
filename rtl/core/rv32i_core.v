@@ -4,6 +4,11 @@ module rv32i_core(
     input clk,
     input reset,
 
+    // Instruction fetch. The memory is synchronous (data returns the cycle
+    // after the address), so imem_addr is the PC for the next cycle.
+    output [31:0] imem_addr,
+    input  [31:0] imem_rdata,
+
     // External memory bus
     output [31:0] mem_addr,
     output [31:0] mem_wdata,
@@ -213,17 +218,15 @@ module rv32i_core(
 
         .pc_plus4_in(pc_plus4_in),
         .pc_imm(pc_imm),
-        .pc_out(pc_out)
+        .pc_out(pc_out),
+        .pc_next(imem_addr)
     );
 
 
     // ================================================================
-    // INSTRUCTION MEMORY
+    // INSTRUCTION FETCH (memory lives in rv32i_soc)
     // ================================================================
-    instruction_memory imem0(
-        .addr(pc_out),
-        .instr(instr)
-    );
+    assign instr = imem_rdata;
 
 
     // ================================================================
