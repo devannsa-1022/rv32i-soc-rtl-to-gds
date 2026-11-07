@@ -66,7 +66,10 @@ always @(*) begin
     
     case (state)
         FETCH: begin
-            case (1'b1) // synthesis parallel_case
+            // The selects are decoded from distinct opcodes, so they are
+            // mutually exclusive and parallel_case cannot change behavior.
+            (* parallel_case *)
+            case (1'b1)
                 u_type_auipc: op_format_out = `U_type_AUIPC;
                 b_type:       op_format_out = `B_type;
                 j_type:       op_format_out = `J_type;

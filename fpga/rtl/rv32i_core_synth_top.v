@@ -4,6 +4,11 @@ module rv32i_core_synth_top (
     input  clk,
     input reset,
 
+    // Instruction memory program-load port
+    input         imem_load_we,
+    input  [7:0]  imem_load_addr,
+    input  [31:0] imem_load_data,
+
     // External memory interface
     output [31:0] mem_addr,
     output [31:0] mem_wdata,
@@ -29,19 +34,18 @@ module rv32i_core_synth_top (
     assign mem_ready = 1'b1;
 
     // ------------------------------------------------------------
-    // Instruction memory, preloaded so the datapath isn't optimized away
+    // Instruction memory, written through the load port so the datapath
+    // isn't optimized away
     // ------------------------------------------------------------
     wire [31:0] imem_addr, imem_rdata;
 
-    instruction_memory #(
-        .INIT_FILE("program.hex")
-    ) imem0 (
+    instruction_memory imem0 (
         .clk(clk),
         .fetch_addr(imem_addr),
         .instr(imem_rdata),
-        .load_we(1'b0),
-        .load_addr(8'h00),
-        .load_data(32'h0)
+        .load_we(imem_load_we),
+        .load_addr(imem_load_addr),
+        .load_data(imem_load_data)
     );
 
     // ------------------------------------------------------------

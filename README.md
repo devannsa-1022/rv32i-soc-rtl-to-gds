@@ -49,8 +49,24 @@ tb/directed/    directed unit/system testbenches
 sw/             RV32I encoder + hazard-aware random program generator
 sw/programs/    program images loaded via +PROGRAM=<file>.hex
 fpga/           FPGA-only wrapper, XDC, and Vivado implementation reports
+flow/           ASIC flow: ORFS config.mk, constraint.sdc, run.sh
 scripts/vivado/ recreate the Vivado project / run UVM tests in batch
 ```
+
+## Running the ASIC flow (OpenROAD-flow-scripts, sky130hd)
+
+Needs WSL2 (or Linux) with Docker and the `openroad/orfs` image
+(`docker pull openroad/orfs:latest`). From WSL:
+
+```
+flow/run.sh synth            # Yosys synthesis
+flow/run.sh floorplan        # any ORFS stage: floorplan place cts route finish
+flow/run.sh gui_floorplan    # open a finished stage in the OpenROAD GUI
+```
+
+The repo is mounted read-only; outputs go to `~/rv32i_orfs_work`
+(`logs/`, `reports/`, `results/` under `sky130hd/rv32i_soc/base`). The RTL
+list comes from `rtl/rtl.f`, shared with simulation.
 
 ## Running simulation (Vivado xsim)
 
@@ -80,13 +96,41 @@ python sw/program_gen.py <seed> sw/programs/program_random.hex
 FPGA (Vivado 2024.2, xczu7ev-2, routed): 100 MHz constraint met with
 WNS +5.04 ns, WHS +0.04 ns; ~2.0k LUTs, ~1.9k FFs. Reports in `fpga/reports/`.
 
+### Synthesis, sky130hd (Yosys 0.68 via ORFS, 20 ns clock, SRAMs as black boxes)
+
+| Metric | Value |
+|---|---|
+| Standard cells | 9,332 |
+| Logic area | 109,300 µm² (0.109 mm²) |
+| Sequential share of area | 50.5% |
+| Flip-flops | 1,979 (1,329 enable, 441 async-reset, 209 other) |
+| Latches / check problems | 0 / 0 |
+
+Area by block, from a hierarchical run (no cross-boundary optimization, so it
+totals 129,090 µm² rather than 109,300 µm²):
+
+| Block | Area (µm²) | Share |
+|---|---|---|
+| Register file (32×32 flops + 2 read muxes) | 55,570 | 43% |
+| AXI-Lite manager + bridge | 14,390 | 11% |
+| ALU | 8,660 | 7% |
+| Pipeline registers (ID/EX, EX/MEM, MEM/WB) | 17,990 | 14% |
+| Program counter + JALR adder | 8,115 | 6% |
+| Peripherals (GPIO, timer, UART) | 10,330 | 8% |
+| Everything else (decode, control, forwarding, ...) | 14,030 | 11% |
+
+The register file dominates. That makes it the first PPA target: dropping
+its reset, or replacing the flops with a latch-based array or a register-file
+macro.
+
 ## Roadmap
 
 - [x] RTL + UVM verification + FPGA implementation
 - [x] Repository setup
 - [x] ASIC-ready RTL: synchronous SRAMs for instruction and data memory, program-load port, synthesis cleanups
-- [ ] SDC constraints
-- [ ] Yosys synthesis on sky130hd
+- [x] SDC constraints
+- [x] Yosys synthesis on sky130hd (SRAMs as black boxes)
+- [ ] sky130 SRAM macros integrated (LEF/LIB/GDS)
 - [ ] Baseline OpenROAD run to GDS (floorplan, PDN, place, CTS, route)
 - [ ] Timing closure: push frequency, physical vs. RTL fixes
 - [ ] PPA experiments: utilization, aspect ratio, macro placement, CTS, PDN

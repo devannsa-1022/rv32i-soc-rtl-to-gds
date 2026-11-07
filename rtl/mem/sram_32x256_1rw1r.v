@@ -8,10 +8,9 @@
 //   - address/control are sampled on the rising clock edge; read data is
 //     valid the following cycle and holds until the port reads again
 //   - wmask0 enables writes per byte lane
-// INIT_FILE optionally preloads the array (used by FPGA builds).
-module sram_32x256_1rw1r #(
-    parameter INIT_FILE = ""
-)(
+// It deliberately has no parameters (the macro has none), so synthesis sees a
+// single module name it can black-box or swap for the macro.
+module sram_32x256_1rw1r (
     // Port 0: read/write
     input             clk0,
     input             csb0,
@@ -29,10 +28,6 @@ module sram_32x256_1rw1r #(
 );
 
     reg [31:0] mem [0:255];
-
-    initial begin
-        if (INIT_FILE != "") $readmemh(INIT_FILE, mem);
-    end
 
     always @(posedge clk0) begin
         if (!csb0) begin

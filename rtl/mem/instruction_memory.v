@@ -7,10 +7,8 @@
 //   - Port 0 (read/write) is a program-load port driven from the SoC pins,
 //     used while the core is held in reset.
 // In simulation the image is loaded from +PROGRAM=<file>.hex (default
-// program_random.hex). INIT_FILE gives FPGA builds an initial image.
-module instruction_memory #(
-    parameter INIT_FILE = ""
-)(
+// program_random.hex). In hardware it is written through the load port.
+module instruction_memory (
     input         clk,
 
     input  [31:0] fetch_addr,
@@ -21,9 +19,7 @@ module instruction_memory #(
     input  [31:0] load_data
 );
 
-    sram_32x256_1rw1r #(
-        .INIT_FILE(INIT_FILE)
-    ) sram0 (
+    sram_32x256_1rw1r sram0 (
         .clk0(clk), .csb0(~load_we), .web0(~load_we), .wmask0(4'hf),
         .addr0(load_addr), .din0(load_data), .dout0(),
 
