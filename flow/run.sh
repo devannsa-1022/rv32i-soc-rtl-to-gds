@@ -5,6 +5,7 @@
 #   flow/run.sh                  # synthesis only (default target: synth)
 #   flow/run.sh floorplan        # any ORFS target: synth floorplan place cts route finish
 #   flow/run.sh gui_floorplan    # open a finished stage in the OpenROAD GUI (via WSLg)
+#   flow/run.sh images floorplan # save PNGs of a finished stage to $ORFS_WORK/images
 #   flow/run.sh clean_all        # delete this design's outputs
 # From Windows PowerShell:
 #   wsl -d Ubuntu --exec bash /mnt/c/.../PD_Project/flow/run.sh synth
@@ -25,6 +26,24 @@ if [ -t 0 ]; then
 fi
 if [ -d /mnt/wslg/.X11-unix ]; then
     DOCKER_ARGS+=(-e "DISPLAY=${DISPLAY:-:0}" -v /mnt/wslg/.X11-unix:/tmp/.X11-unix)
+fi
+
+if [ "${1:-}" = images ]; then
+    STAGE=${2:?usage: flow/run.sh images floorplan|place|cts|route|final}
+    case $STAGE in
+        floorplan) ODB=2_floorplan.odb ;;
+        place)     ODB=3_place.odb ;;
+        cts)       ODB=4_cts.odb ;;
+        route)     ODB=5_route.odb ;;
+        final)     ODB=6_final.odb ;;
+        *) echo "unknown stage: $STAGE" >&2; exit 1 ;;
+    esac
+    mkdir -p "$WORK/images"
+    exec docker run "${DOCKER_ARGS[@]}" -e QT_QPA_PLATFORM=offscreen -e STAGE="$STAGE" \
+        -e ODB_FILE="/work_out/results/sky130hd/rv32i_soc/base/$ODB" -e IMAGE_DIR=/work_out/images \
+        "$IMAGE" bash -c "
+        source /OpenROAD-flow-scripts/env.sh >/dev/null &&
+        openroad -gui -no_splash -exit /work/flow/save_images.tcl"
 fi
 
 exec docker run "${DOCKER_ARGS[@]}" "$IMAGE" bash -c "

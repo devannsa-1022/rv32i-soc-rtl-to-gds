@@ -2,9 +2,9 @@
 
 // Data memory: 256 words in a 1rw1r SRAM (port 0 only). Reads are
 // synchronous: the address presented with mem_read is sampled on the clock
-// edge and read_data is valid the following cycle, holding until the next
-// access. axi_lite_to_simple_bus keeps the read address stable from R_ACCESS
-// into R_RESP and samples read_data in R_RESP, which matches this timing.
+// edge and read_data is valid during the following cycle only (it does not
+// hold). axi_lite_to_simple_bus keeps mem_read high with a stable address
+// from R_ACCESS through R_RESP, so read_data is valid whenever it samples.
 module data_memory (
     input         clk,
     input  [31:0] addr,

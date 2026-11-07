@@ -17,19 +17,24 @@ grid / IR drop, and signoff.
 
 ### Memories
 
-Both memories use `sram_32x256_1rw1r`, a behavioral model whose ports and
-timing match the OpenRAM `sky130_sram_1kbyte_1rw1r_32x256_8` macro (active-low
-chip select and write enable, registered address, data valid the next cycle),
-so the ASIC flow can drop in the hard macro without changing the RTL around it.
+Both memories use `sram_32x256_1rw1r`. In the ASIC flow (`USE_SRAM_MACRO`)
+it wraps the OpenRAM `sky130_sram_1kbyte_1rw1r_32x256_8` hard macro
+(`macros/`); in simulation it is a behavioral model with the macro's ports
+and cycle timing: active-low chip select and write enable, registered
+address, and read data valid only in the cycle after a read. The macro drives
+its output to X after every clock edge that is not a read, and the model
+does the same, so nothing can rely on read data holding.
 
 - **Instruction memory** sits in `rv32i_soc`, outside the core. The core drives
   `imem_addr` with the *next* PC, so the SRAM's registered output always
   matches the current `pc_out`. That keeps fetch cycle-for-cycle identical to
   the original combinational ROM. Port 1 serves fetch, and port 0 is a
   program-load port (`imem_load_we/addr/data`) used while reset is held.
-- **Data memory** sits behind the AXI-Lite bridge, which already holds the read
-  address from `R_ACCESS` into `R_RESP`, so the one-cycle read latency fits
-  without bridge changes.
+- **Data memory** sits behind the AXI-Lite bridge. The bridge keeps the SRAM
+  selected with a stable address from `R_ACCESS` through `R_RESP`, so the SRAM
+  re-reads each cycle until the manager accepts the data. (Selecting it only
+  in `R_ACCESS` worked with a hold-forever model but returned X with the
+  macro's real behavior; the macro-accurate model caught it.)
 
 Memory map (from `axi_lite_to_simple_bus.v`):
 
@@ -49,7 +54,10 @@ tb/directed/    directed unit/system testbenches
 sw/             RV32I encoder + hazard-aware random program generator
 sw/programs/    program images loaded via +PROGRAM=<file>.hex
 fpga/           FPGA-only wrapper, XDC, and Vivado implementation reports
-flow/           ASIC flow: ORFS config.mk, constraint.sdc, run.sh
+flow/           ASIC flow: ORFS config.mk, constraint.sdc, pdn.tcl,
+                macro_placement.tcl, run.sh, save_images.tcl
+macros/         SKY130 SRAM macro (LEF, LIB, GDS, Verilog), Apache-2.0
+docs/images/    layout images
 scripts/vivado/ recreate the Vivado project / run UVM tests in batch
 ```
 
@@ -62,6 +70,7 @@ Needs WSL2 (or Linux) with Docker and the `openroad/orfs` image
 flow/run.sh synth            # Yosys synthesis
 flow/run.sh floorplan        # any ORFS stage: floorplan place cts route finish
 flow/run.sh gui_floorplan    # open a finished stage in the OpenROAD GUI
+flow/run.sh images floorplan # save PNGs of a finished stage (headless)
 ```
 
 The repo is mounted read-only; outputs go to `~/rv32i_orfs_work`
@@ -96,18 +105,21 @@ python sw/program_gen.py <seed> sw/programs/program_random.hex
 FPGA (Vivado 2024.2, xczu7ev-2, routed): 100 MHz constraint met with
 WNS +5.04 ns, WHS +0.04 ns; ~2.0k LUTs, ~1.9k FFs. Reports in `fpga/reports/`.
 
-### Synthesis, sky130hd (Yosys 0.68 via ORFS, 20 ns clock, SRAMs as black boxes)
+### Synthesis, sky130hd (Yosys 0.68 via ORFS, 20 ns clock)
 
 | Metric | Value |
 |---|---|
-| Standard cells | 9,332 |
-| Logic area | 109,300 µm² (0.109 mm²) |
-| Sequential share of area | 50.5% |
+| Standard cells | 9,347 |
+| Logic area | 109,470 µm² (0.109 mm²) |
+| SRAM macros | 2 × 190,713 µm² (381,425 µm²) |
+| Total cell area | 490,894 µm² |
+| Sequential share of logic area | 50.4% |
 | Flip-flops | 1,979 (1,329 enable, 441 async-reset, 209 other) |
 | Latches / check problems | 0 / 0 |
 
-Area by block, from a hierarchical run (no cross-boundary optimization, so it
-totals 129,090 µm² rather than 109,300 µm²):
+Area by block, from an earlier hierarchical run with the SRAMs as black boxes
+(no cross-boundary optimization, so it totals about 129,090 µm² rather than
+the flat ~109,300 µm²):
 
 | Block | Area (µm²) | Share |
 |---|---|---|
@@ -123,15 +135,39 @@ The register file dominates. That makes it the first PPA target: dropping
 its reset, or replacing the flops with a latch-based array or a register-file
 macro.
 
+### Floorplan
+
+![Floorplan with both SRAM macros and the power grid](docs/images/floorplan.png)
+
+| Item | Value |
+|---|---|
+| Die / core | 1100 × 850 µm / 1020 × 770 µm |
+| Utilization (cells + macros over core) | 63% |
+| Macro placement | Manual (`flow/macro_placement.tcl`), 20 µm halos, 40 µm channel |
+| Standard-cell band | 1020 × 340 µm under the macros |
+| Tap cells | 5,006 |
+| Pre-placement worst slack | +8.78 ns at 20 ns (an I/O path from `reset`) |
+
+Both SRAMs sit along the top edge. Port-1 pins are on the macro's top and
+right edges and port-0 pins on its bottom and left, so the instruction SRAM
+is mirrored (MX) to turn its fetch port toward the logic, and the data SRAM
+(port 0 only) stays at R0. The automatic macro placer could not fit its
+80 µm minimum channels in this core, which is why placement is manual.
+
+The power grid is the sky130hd platform grid (met1 rails, met4/met5 straps)
+plus connections for the macros' `vccd1`/`vssd1` pins (`flow/pdn.tcl`).
+Open items: only 6 of 106 macro pins align to the routing tracks (to check
+at routing), and one met4-to-met5 via was skipped near (42, 394) µm.
+
 ## Roadmap
 
 - [x] RTL + UVM verification + FPGA implementation
 - [x] Repository setup
 - [x] ASIC-ready RTL: synchronous SRAMs for instruction and data memory, program-load port, synthesis cleanups
 - [x] SDC constraints
-- [x] Yosys synthesis on sky130hd (SRAMs as black boxes)
-- [ ] sky130 SRAM macros integrated (LEF/LIB/GDS)
-- [ ] Baseline OpenROAD run to GDS (floorplan, PDN, place, CTS, route)
+- [x] Yosys synthesis on sky130hd
+- [x] sky130 SRAM macros integrated (LEF/LIB/GDS), floorplan + power grid
+- [ ] Baseline OpenROAD run to GDS (place, CTS, route, finish)
 - [ ] Timing closure: push frequency, physical vs. RTL fixes
 - [ ] PPA experiments: utilization, aspect ratio, macro placement, CTS, PDN
 - [ ] Signoff: RC extraction, multi-corner STA, IR drop, DRC/LVS, antenna

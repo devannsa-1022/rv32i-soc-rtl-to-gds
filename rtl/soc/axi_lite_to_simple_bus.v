@@ -246,7 +246,10 @@ module axi_lite_to_simple_bus #(
         end
         else if (rstate == R_ACCESS || rstate == R_RESP) begin
             case (rsel_latched)
-                SEL_MEM:   begin mem_addr = araddr_latched_r; mem_re = (rstate == R_ACCESS); end
+                // mem_re stays high through R_RESP: the SRAM's output is only
+                // valid in the cycle after a read, so it re-reads the same
+                // address each cycle until axi_rdata has been accepted.
+                SEL_MEM:   begin mem_addr = araddr_latched_r; mem_re = 1'b1; end
                 SEL_GPIO:  gpio_addr = araddr_latched_r;
                 SEL_UART:  begin uart_addr = araddr_latched_r; uart_re = (rstate == R_ACCESS); end
                 SEL_TIMER: timer_addr = araddr_latched_r;
