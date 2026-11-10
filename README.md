@@ -159,6 +159,69 @@ plus connections for the macros' `vccd1`/`vssd1` pins (`flow/pdn.tcl`).
 Open items: only 6 of 106 macro pins align to the routing tracks (to check
 at routing), and one met4-to-met5 via was skipped near (42, 394) µm.
 
+### Baseline run to GDS (place, CTS, route, finish)
+
+![Final routed layout](docs/images/final_layout.png)
+
+The baseline flow runs with default ORFS settings and closes timing at
+20 ns with no DRC or antenna violations. The final layout is
+`~/rv32i_orfs_work/results/sky130hd/rv32i_soc/base/6_final.gds` (26 MB, not
+committed; standard cells and
+SRAM layout merged by KLayout with no missing or orphan cells).
+
+| Metric | Value |
+|---|---|
+| Clock target | 20 ns (50 MHz) |
+| Setup WNS / TNS | +8.19 ns / 0 |
+| Hold worst slack / TNS | +0.12 ns / 0 |
+| Minimum clock period | 11.81 ns (84.6 MHz) |
+| Clock skew (setup / hold) | 0.58 / 0.52 ns |
+| Standard cells (no fill) | 14,600: 5,006 taps, 536 timing-repair buffers, 363 clock buffers/inverters, 39 antenna diodes |
+| Area | 124,170 µm² standard cells + 381,425 µm² macros = 505,595 µm² |
+| Utilization | 64.6% of the core (standard cells alone: 31%) |
+| Power (TT, vectorless) | 13.4 mW: sequential 34%, clock tree 30%, SRAMs 29%, combinational 7% |
+| Wirelength / vias | 480,323 µm / 84,048 (met1 41%, met2 39%, met3 16%, met4 4%) |
+| Global route overflow | 0 (16% of routing resources used) |
+| Detailed-route DRC | 0 (13,571 at the first iteration) |
+| Antenna violations | 0 (22 diodes inserted) |
+| Max-slew violations | 28, all on SRAM input pins (see below) |
+| Runtime | ~15 min on 12 threads, 13 min of it detailed routing |
+
+Timing here uses the router's parasitic estimates. Extracted RC,
+multi-corner STA and KLayout/Magic DRC/LVS come in signoff.
+
+**Critical path.** The worst register-to-register path is the predicted one:
+register-file read, branch compare, next-PC select, instruction SRAM address
+(`imem0 addr1[2]`).
+
+| Segment | Delay (ns) | Arrives at (ns) |
+|---|---|---|
+| Clock tree to the launch flop | 1.01 | 1.01 |
+| Flop clk-to-Q plus four `buf_4` stages fanning the register-file read select out (fanout 31-41 each) | 3.38 | 4.39 |
+| Register-file read (two levels of `mux4`) | 1.13 | 5.52 |
+| Branch compare and taken decision | 3.13 | 8.65 |
+| Next-PC select | 1.81 | 10.46 |
+| Wire repeaters to the SRAM pin, including three `clkdlybuf4s50` delay cells | 1.75 | 12.21 |
+| Required time at the SRAM (clock latency 0.75, uncertainty, setup) | | 20.39 |
+
+Two things stand out for timing closure: about 3.4 ns goes into fanning out
+the register-file read select, and the resizer used slow delay cells as wire
+repeaters (about 1.45 ns of the last segment).
+
+**SRAM slew waiver.** The OpenRAM Liberty file characterizes the SRAM inputs
+only up to a 40 ps input slew and sets that as the pins' `max_transition`.
+No sky130hd driver can meet 40 ps at an SRAM pin, so all 28 SRAM address and
+write-mask pins report violations, most of them by 1-15 ps. The worst are the
+fetch address pins `addr1[4:7]` at about 0.3 ns. The SRAM setup and hold
+times beyond 40 ps are extrapolated from the table, so this is recorded as a
+known limitation of the macro's characterization, not fixed.
+
+**Floorplan open items, resolved:** the router reached every SRAM pin with
+no pin-access errors, despite only 6 of 106 pins sitting on routing tracks.
+The skipped power via is still to check in the IR-drop analysis.
+
+![Placement: standard cells clustered under the SRAMs](docs/images/placement.png)
+
 ## Roadmap
 
 - [x] RTL + UVM verification + FPGA implementation
@@ -167,7 +230,7 @@ at routing), and one met4-to-met5 via was skipped near (42, 394) µm.
 - [x] SDC constraints
 - [x] Yosys synthesis on sky130hd
 - [x] sky130 SRAM macros integrated (LEF/LIB/GDS), floorplan + power grid
-- [ ] Baseline OpenROAD run to GDS (place, CTS, route, finish)
+- [x] Baseline OpenROAD run to GDS (place, CTS, route, finish)
 - [ ] Timing closure: push frequency, physical vs. RTL fixes
 - [ ] PPA experiments: utilization, aspect ratio, macro placement, CTS, PDN
 - [ ] Signoff: RC extraction, multi-corner STA, IR drop, DRC/LVS, antenna
